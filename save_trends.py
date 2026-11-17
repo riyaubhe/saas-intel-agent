@@ -5,8 +5,16 @@ from analyze_trends import ask_gemini_for_signals
 
 LOG_FILE = "trends_log.csv"
 
-def save_signals(keyword="SaaS layoffs hiring", how_many=20):
-    headlines = fetch_hn_stories(keyword, num_results=how_many)
+
+def save_signals(how_many=20):
+    # search for layoff news and hiring news separately, then combine them
+    headlines = fetch_hn_stories("layoffs", how_many) + fetch_hn_stories("hiring", how_many)
+
+    # if nothing new was posted today, stop here (no need to call gemini)
+    if not headlines:
+        print("No new stories today")
+        return None
+
     signals = ask_gemini_for_signals(headlines)["signals"]
 
     today = datetime.now().strftime("%Y-%m-%d %H:%M")
@@ -19,7 +27,7 @@ def save_signals(keyword="SaaS layoffs hiring", how_many=20):
             "description": signal["description"]
         })
 
-    new_data = pd.DataFrame(new_rows)
+    new_data = pd.DataFrame(new_rows, columns=["date", "company", "signal_type", "description"])
 
     try:
         old_data = pd.read_csv(LOG_FILE)
@@ -31,6 +39,8 @@ def save_signals(keyword="SaaS layoffs hiring", how_many=20):
     print(f"Saved {len(new_rows)} signals to {LOG_FILE}")
     return all_data
 
+
 if __name__ == "__main__":
     all_data = save_signals()
-    print(all_data.tail(3))
+    if all_data is not None:
+        print(all_data.tail(3))

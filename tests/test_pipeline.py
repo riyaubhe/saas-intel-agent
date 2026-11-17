@@ -81,3 +81,15 @@ def test_save_adds_to_csv(tmp_path, monkeypatch):
     # running it twice should give 2 rows, not overwrite
     saved = pd.read_csv(test_file)
     assert len(saved) == 2
+
+
+def test_save_does_nothing_when_no_news(tmp_path, monkeypatch):
+    test_file = tmp_path / "test_log.csv"
+    monkeypatch.setattr(save_trends, "LOG_FILE", str(test_file))
+    monkeypatch.setattr(save_trends, "fetch_hn_stories", lambda *args, **kwargs: [])
+
+    result = save_trends.save_signals()
+
+    # no news means no csv gets made
+    assert result is None
+    assert not test_file.exists()
